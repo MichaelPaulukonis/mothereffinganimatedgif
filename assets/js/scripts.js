@@ -169,10 +169,6 @@
             rotations.push($(el).data('rotation'));
         });
 
-        console.time('App.mfAnimatedGIF()');
-
-        var worker = new Worker('/assets/js/worker.js');
-
         var animOpts = {
             images: App.timeline,
             rotations: rotations,
@@ -185,17 +181,16 @@
             width : App.animWidth  || App.timeline[0].width
         }
 
-        App.mfAnimatedGIF = new MFAnimatedGIF(animOpts); // TODO: should be done in worker
-
-        console.timeEnd('App.mfAnimatedGIF()');
+        App.mfAnimatedGIF = new MFAnimatedGIF(animOpts);
 
         $('#sharelink').css({'display':'inline-block'});
 
-        $('#animresult').attr('src', App.mfAnimatedGIF.dataURL());
+        //$('#animresult').attr('src', App.mfAnimatedGIF.dataURL());
 
         //
         // Create the download link
         //
+/*
         window.URL = window.webkitURL || window.URL;
         window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
 
@@ -229,6 +224,7 @@
             iframe.contentWindow.postMessage(JSON.stringify({name:filename, data: App.mfAnimatedGIF.rawDataURL(), formdata: Modernizr.formdata}),"http://saveasbro.com/gif/");
         }
 
+*/
     }
     
 function canicallback(data){

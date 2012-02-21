@@ -1,6 +1,8 @@
 // handles interfacing with GIFEncoder
 var MFAnimatedGIF = function(opts) {
     var encoder;
+    var worker;
+    var data;
 
     var _rotate = function(image, rotation) {
         var canvas = document.createElement("canvas");
@@ -18,20 +20,41 @@ var MFAnimatedGIF = function(opts) {
         return canvas;
     };
 
+    var onMessage = function(e) {
+        data = e.data.imagedata;
+
+        $('#animresult').attr('src', this._dataURL());
+
+        // todo message listener gets data from worker and sets it in class scoped data var
+        // encoder.stream().getData()
+    };
+
     var _initialize = function(opts) {
 
         var canvas = document.createElement("canvas");
-        var context = canvas.getContext('2d');
+        canvas.width  = opts.width;
+        canvas.height = opts.height;
 
+        worker = new Worker('assets/js/mfaworker.js'); 
+        //worker.addEventListener('message', $.proxy(this, 'onMessage'), false);
+        var blah = this;
+        worker.onmessage = function(e) {
+            if(e.data.status === 'complete') {
+                var data = e.data.imagedata;
+                $('#animresult').attr('src', 'data:image/gif;base64,' + $.base64.encode(data));
+            }
+        };
+
+        worker.postMessage({'type':'setup', 'opts':{'repeat':opts.repeat, 'delay':opts.delay, 'width':opts.width, 'height':opts.height, 'quality':opts.quality}});
+
+/* todo setup message to worker
         encoder = new GIFEncoder();
         encoder.setRepeat(opts.repeat);
         encoder.setDelay(opts.delay);
-        canvas.width  = opts.width;
-        canvas.height = opts.height;
         encoder.setSize(opts.width, opts.height);
         encoder.setQuality(App.maxQuality + 1 - (App.maxQuality * (opts.quality / 10)));
-
         encoder.start();
+*/
 
         for(var i=0; i<opts.images.length; i++) {
             var animframe = (opts.rotations[i] === 0) ? opts.images[i] : _rotate(opts.images[i], opts.rotations[i]);
@@ -39,14 +62,19 @@ var MFAnimatedGIF = function(opts) {
             var ctx = canvas.getContext('2d');
             ctx.drawImage(animframe, 0, 0, animframe.width, animframe.height, 0, 0, canvas.width, canvas.height);
             
-            encoder.addFrame(ctx);    
+            // todo add frame message to worker
+            // encoder.addFrame(ctx.getImageData(0,0, canvas.width, canvas.height).data, true);
+            worker.postMessage({'type':'addFrame', 'imagedata':ctx.getImageData(0,0, canvas.width, canvas.height)});
         }
 
-        encoder.finish();
+        // todo finish message to worker
+        // encoder.finish();
+        worker.postMessage({'type':'finish'});
     };
 
     var _rawDataURL = function() {
-        return $.base64.encode(encoder.stream().getData());
+        //return $.base64.encode(encoder.stream().getData());
+        return $.base64.encode(data);
     };
 
     var _dataURL = function() {
@@ -55,7 +83,7 @@ var MFAnimatedGIF = function(opts) {
 
     var _binaryURL = function() {
         // Convert encoder data to binary format
-        var data = encoder.stream().getData();
+        //var data = encoder.stream().getData();
         var byteArray = new Uint8Array(data.length);
         for (var i = 0; i < data.length; i++) {
             byteArray[i] = data.charCodeAt(i) & 0xff;
